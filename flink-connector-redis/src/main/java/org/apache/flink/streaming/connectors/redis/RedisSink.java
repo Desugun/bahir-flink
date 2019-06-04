@@ -17,7 +17,11 @@
 
 package org.apache.flink.streaming.connectors.redis;
 
+import java.io.Serializable;
+import java.util.function.Function;
 import org.apache.flink.configuration.Configuration;
+/*import org.apache.flink.hadoop.shaded.com.google.common.base.Charsets;*/
+import org.apache.flink.shaded.guava18.com.google.common.base.Charsets;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisClusterConfig;
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisConfigBase;
@@ -25,6 +29,7 @@ import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisPoolC
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisSentinelConfig;
 import org.apache.flink.streaming.connectors.redis.common.container.RedisCommandsContainer;
 import org.apache.flink.streaming.connectors.redis.common.container.RedisCommandsContainerBuilder;
+import org.apache.flink.streaming.connectors.redis.common.mapper.RedisByteMapper;
 import org.apache.flink.streaming.connectors.redis.common.mapper.RedisCommand;
 import org.apache.flink.streaming.connectors.redis.common.mapper.RedisDataType;
 import org.apache.flink.streaming.connectors.redis.common.mapper.RedisCommandDescription;
@@ -50,8 +55,8 @@ import java.util.Objects;
  * <p>Example:
  *
  * <pre>
- *{@code
- *public static class RedisExampleMapper implements RedisMapper<Tuple2<String, String>> {
+ * {@code
+ * public static class RedisExampleMapper implements RedisMapper<Tuple2<String, String>> {
  *
  *    private RedisCommand redisCommand;
  *
@@ -67,11 +72,11 @@ import java.util.Objects;
  *    public String getValueFromData(Tuple2<String, String> data) {
  *        return data.f1;
  *    }
- *}
- *JedisPoolConfig jedisPoolConfig = new JedisPoolConfig.Builder()
+ * }
+ * JedisPoolConfig jedisPoolConfig = new JedisPoolConfig.Builder()
  *    .setHost(REDIS_HOST).setPort(REDIS_PORT).build();
- *new RedisSink<String>(jedisPoolConfig, new RedisExampleMapper(RedisCommand.LPUSH));
- *}</pre>
+ * new RedisSink<String>(jedisPoolConfig, new RedisExampleMapper(RedisCommand.LPUSH));
+ * }</pre>
  *
  * @param <IN> Type of the elements emitted by this sink
  */
@@ -93,9 +98,21 @@ public class RedisSink<IN> extends RichSinkFunction<IN> {
     private String additionalKey;
     private RedisMapper<IN> redisSinkMapper;
     private RedisCommand redisCommand;
+    private Function<IN, String> updateFuc;
 
     private FlinkJedisConfigBase flinkJedisConfigBase;
     private RedisCommandsContainer redisCommandsContainer;
+
+    /**
+     * Set function instance
+     *
+     * @param fuc the function to update additional key
+     * @return this
+     */
+    public RedisSink<IN> setUpdateFuc(Function<IN, String> fuc) {
+        updateFuc = (Function<IN, String> & Serializable) fuc;
+        return this;
+    }
 
     /**
      * Creates a new {@link RedisSink} that connects to the Redis server.
@@ -126,39 +143,92 @@ public class RedisSink<IN> extends RichSinkFunction<IN> {
      */
     @Override
     public void invoke(IN input) throws Exception {
-        String key = redisSinkMapper.getKeyFromData(input);
-        String value = redisSinkMapper.getValueFromData(input);
+        if (updateFuc != null) {
+            additionalKey = updateFuc.apply(input);
+        }
 
-        switch (redisCommand) {
-            case RPUSH:
-                this.redisCommandsContainer.rpush(key, value);
-                break;
-            case LPUSH:
-                this.redisCommandsContainer.lpush(key, value);
-                break;
-            case SADD:
-                this.redisCommandsContainer.sadd(key, value);
-                break;
-            case SET:
-                this.redisCommandsContainer.set(key, value);
-                break;
-            case PFADD:
-                this.redisCommandsContainer.pfadd(key, value);
-                break;
-            case PUBLISH:
-                this.redisCommandsContainer.publish(key, value);
-                break;
-            case ZADD:
-                this.redisCommandsContainer.zadd(this.additionalKey, value, key);
-                break;
-            case ZREM:
-                this.redisCommandsContainer.zrem(this.additionalKey, key);
-                break;
-            case HSET:
-                this.redisCommandsContainer.hset(this.additionalKey, key, value);
-                break;
-            default:
-                throw new IllegalArgumentException("Cannot process such data type: " + redisCommand);
+        if (redisSinkMapper instanceof RedisByteMapper) {
+            byte[] key = ((RedisByteMapper) redisSinkMapper).getByteKeyFromData(input);
+            byte[] value = ((RedisByteMapper) redisSinkMapper).getByteValueFromData(input);
+            int expire = ((RedisByteMapper) redisSinkMapper).getExpireSeconds(input);
+            int increment = ((RedisByteMapper) redisSinkMapper).getIntIncrement(input);
+            double incrementD = ((RedisByteMapper) redisSinkMapper).getDoubleIncrement(input);
+
+            switch (redisCommand) {
+                case SET:
+                    this.redisCommandsContainer.set(key, value, expire);
+                    break;
+                case HSET:
+                    this.redisCommandsContainer.hset(key, additionalKey.getBytes(Charsets.UTF_8), value);
+                    break;
+                case HINCRBY:
+                    this.redisCommandsContainer.hincrby(key, additionalKey.getBytes(Charsets.UTF_8), increment);
+                    break;
+                case HINCBYFLOAT:
+                    this.redisCommandsContainer.hincrbyfloat(key, additionalKey.getBytes(Charsets.UTF_8), incrementD);
+                    break;
+                case INCR:
+                    this.redisCommandsContainer.incr(key);
+                    break;
+                case INCRBY:
+                    this.redisCommandsContainer.incrby(key, increment);
+                    break;
+                case INCRBYFLOAT:
+                    this.redisCommandsContainer.incrbyfloat(key, incrementD);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Cannot process such data type: " + redisCommand);
+            }
+        } else {
+            String key = redisSinkMapper.getKeyFromData(input);
+            String value = redisSinkMapper.getValueFromData(input);
+
+            switch (redisCommand) {
+                case RPUSH:
+                    this.redisCommandsContainer.rpush(key, value);
+                    break;
+                case LPUSH:
+                    this.redisCommandsContainer.lpush(key, value);
+                    break;
+                case SADD:
+                    this.redisCommandsContainer.sadd(key, value);
+                    break;
+                case SET:
+                    this.redisCommandsContainer.set(key, value);
+                    break;
+                case PFADD:
+                    this.redisCommandsContainer.pfadd(key, value);
+                    break;
+                case PUBLISH:
+                    this.redisCommandsContainer.publish(key, value);
+                    break;
+                case ZADD:
+                    this.redisCommandsContainer.zadd(this.additionalKey, value, key);
+                    break;
+                case ZREM:
+                    this.redisCommandsContainer.zrem(this.additionalKey, key);
+                    break;
+                case HSET:
+                    this.redisCommandsContainer.hset(this.additionalKey, key, value);
+                    break;
+                case HINCRBY:
+                    this.redisCommandsContainer.hincrby(key, this.additionalKey, value);
+                    break;
+                case HINCBYFLOAT:
+                    this.redisCommandsContainer.hincrbyfloat(key, this.additionalKey, value);
+                    break;
+                case INCR:
+                    this.redisCommandsContainer.incr(key);
+                    break;
+                case INCRBY:
+                    this.redisCommandsContainer.incrby(key, value);
+                    break;
+                case INCRBYFLOAT:
+                    this.redisCommandsContainer.incrbyfloat(key, value);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Cannot process such data type: " + redisCommand);
+            }
         }
     }
 
@@ -180,6 +250,7 @@ public class RedisSink<IN> extends RichSinkFunction<IN> {
 
     /**
      * Closes commands container.
+     *
      * @throws IOException if command container is unable to close.
      */
     @Override

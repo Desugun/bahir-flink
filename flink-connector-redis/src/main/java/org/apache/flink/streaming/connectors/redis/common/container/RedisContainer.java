@@ -16,15 +16,14 @@
  */
 package org.apache.flink.streaming.connectors.redis.common.container;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisSentinelPool;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Objects;
 
 /**
  * Redis command container if we want to connect to a single Redis server or to Redis sentinels
@@ -91,6 +90,91 @@ public class RedisContainer implements RedisCommandsContainer, Closeable {
         try {
             jedis = getInstance();
             jedis.hset(key, hashField, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
+                    key, hashField, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void hset(final byte[] key, final byte[] hashField, final byte[] value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.hset(key, hashField, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
+                    key, hashField, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void hincrby(String key, String hashField, String value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.hincrBy(key, hashField, Integer.parseInt(value));
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
+                    key, hashField, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void hincrby(byte[] key, byte[] hashField, int value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.hincrBy(key, hashField, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
+                    key, hashField, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void hincrbyfloat(String key, String hashField, String value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.hincrByFloat(key, hashField, Double.parseDouble(value));
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
+                    key, hashField, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void hincrbyfloat(byte[] key, byte[] hashField, double value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.hincrByFloat(key, hashField, value);
         } catch (Exception e) {
             if (LOG.isErrorEnabled()) {
                 LOG.error("Cannot send Redis message with command HSET to key {} and hashField {} error message {}",
@@ -188,6 +272,146 @@ public class RedisContainer implements RedisCommandsContainer, Closeable {
     }
 
     @Override
+    public void set(final byte[] key, final byte[] value, final int expire) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.set(key, value);
+            if (expire > 0) {
+                jedis.expire(key, expire);
+            }
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command SET to key {} error message {}",
+                    key, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incr(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.incr(key);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCR to key {} error message {}",
+                    key, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incr(byte[] key) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.incr(key);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCR to key {} error message {}",
+                    key, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incrby(String key, String value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.incrBy(key, Integer.parseInt(value));
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCRBY to key {} and value {} error message {}",
+                    key, value, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incrby(byte[] key, int value) {
+        Jedis jedis = null;
+        try {
+
+            jedis = getInstance();
+            jedis.incrBy(key, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCRBY to key {} error message {}",
+                    key, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incrbyfloat(String key, String value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.incrByFloat(key, Double.parseDouble(value));
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCRBYFLOAT to key {} and value {} error message {}",
+                    key, value, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void incrbyfloat(byte[] key, double value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.incrByFloat(key, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command INCRBYFLOAT to key {} and value {} error message {}",
+                    key, value, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
+    public void setbit(final byte[] key, final long offset, final byte[] value) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            jedis.setbit(key, offset, value);
+        } catch (Exception e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Cannot send Redis message with command SET to key {} error message {}",
+                    key, e.getMessage());
+            }
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    @Override
     public void pfadd(final String key, final String element) {
         Jedis jedis = null;
         try {
@@ -230,7 +454,7 @@ public class RedisContainer implements RedisCommandsContainer, Closeable {
         } catch (Exception e) {
             if (LOG.isErrorEnabled()) {
                 LOG.error("Cannot send Redis message with command ZREM to set {} error message {}",
-                        key, e.getMessage());
+                    key, e.getMessage());
             }
             throw e;
         } finally {

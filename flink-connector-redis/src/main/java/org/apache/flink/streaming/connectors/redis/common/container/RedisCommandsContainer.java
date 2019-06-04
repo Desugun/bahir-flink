@@ -42,12 +42,36 @@ public interface RedisCommandsContainer extends Serializable {
      */
     void hset(String key, String hashField, String value);
 
+    void hset(byte[] key, byte[] hashField, byte[] value);
+
+    /**
+     * Increase
+     *
+     * @param key The name of the Sorted Set
+     * @param hashField Hash field
+     * @param value Hash increment
+     */
+    void hincrby(String key, String hashField, String value);
+
+    void hincrby(byte[] key, byte[] hashField, int value);
+
+    /**
+     * Adds the specified member with the specified scores to the sorted set stored at key.
+     *
+     * @param key The name of the Sorted Set
+     * @param hashField Hash field
+     * @param value Hash increment in float
+     */
+    void hincrbyfloat(String key, String hashField, String value);
+
+    void hincrbyfloat(byte[] key, byte[] hashField, double value);
+
     /**
      * Insert the specified value at the tail of the list stored at key.
      * If key does not exist, it is created as empty list before performing the push operation.
      *
      * @param listName Name of the List
-     * @param value  Value to be added
+     * @param value Value to be added
      */
     void rpush(String listName, String value);
 
@@ -56,7 +80,7 @@ public interface RedisCommandsContainer extends Serializable {
      * If key does not exist, it is created as empty list before performing the push operation.
      *
      * @param listName Name of the List
-     * @param value  Value to be added
+     * @param value Value to be added
      */
     void lpush(String listName, String value);
 
@@ -88,6 +112,31 @@ public interface RedisCommandsContainer extends Serializable {
      */
     void set(String key, String value);
 
+    void set(byte[] key, byte[] value, int expire);
+
+    void incr(String key);
+
+    void incr(byte[] key);
+
+    void incrby(String key, String value);
+
+    void incrby(byte[] key, int value);
+
+    void incrbyfloat(String key, String value);
+
+    void incrbyfloat(byte[] key, double value);
+
+    /**
+     * Set key to hold byte array value with offset.
+     * If key does not exist, a new key holding a value is created.
+     * If key already holds value, it is overwritten.
+     *
+     * @param key the key name in which value to be set
+     * @param offset the offset
+     * @param value the value
+     */
+    void setbit(byte[] key, long offset, byte[] value);
+
     /**
      * Adds all the element arguments to the HyperLogLog data structure
      * stored at the variable name specified as first argument.
@@ -102,7 +151,7 @@ public interface RedisCommandsContainer extends Serializable {
      *
      * @param key The name of the Sorted Set
      * @param score Score of the element
-     * @param element  element to be added
+     * @param element element to be added
      */
     void zadd(String key, String score, String element);
 
@@ -110,7 +159,7 @@ public interface RedisCommandsContainer extends Serializable {
      * Removes the specified member from the sorted set stored at key.
      *
      * @param key The name of the Sorted Set
-     * @param element  element to be removed
+     * @param element element to be removed
      */
     void zrem(String key, String element);
 

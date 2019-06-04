@@ -22,9 +22,9 @@ import java.io.Serializable;
 
 /**
  * Function that creates the description how the input data should be mapped to redis type.
- *<p>Example:
- *<pre>{@code
- *private static class RedisTestMapper implements RedisMapper<Tuple2<String, String>> {
+ * <p>Example:
+ * <pre>{@code
+ * private static class RedisTestMapper implements RedisMapper<Tuple2<String, String>> {
  *    public RedisDataTypeDescription getCommandDescription() {
  *        return new RedisDataTypeDescription(RedisCommand.PUBLISH);
  *    }
@@ -34,8 +34,8 @@ import java.io.Serializable;
  *    public String getValueFromData(Tuple2<String, String> data) {
  *        return data.f1;
  *    }
- *}
- *}</pre>
+ * }
+ * }</pre>
  *
  * @param <T> The type of the element handled by this {@code RedisMapper}
  */

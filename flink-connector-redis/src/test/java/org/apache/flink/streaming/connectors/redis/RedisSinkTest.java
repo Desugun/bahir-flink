@@ -36,18 +36,18 @@ import java.util.Set;
 
 public class RedisSinkTest extends TestLogger {
 
-    @Test(expected=NullPointerException.class)
-    public void shouldThrowNullPointExceptionIfDataMapperIsNull(){
+    @Test(expected = NullPointerException.class)
+    public void shouldThrowNullPointExceptionIfDataMapperIsNull() {
         new RedisSink<>(new FlinkJedisClusterConfig.Builder().build(), null);
     }
 
     @Test(expected = NullPointerException.class)
-    public void shouldThrowNullPointerExceptionIfCommandDescriptionIsNull(){
+    public void shouldThrowNullPointerExceptionIfCommandDescriptionIsNull() {
         new RedisSink<>(new FlinkJedisClusterConfig.Builder().build(), new TestMapper(null));
     }
 
     @Test(expected = NullPointerException.class)
-    public void shouldThrowNullPointerExceptionIfConfigurationIsNull(){
+    public void shouldThrowNullPointerExceptionIfConfigurationIsNull() {
         new RedisSink<>(null, new TestMapper(new RedisCommandDescription(RedisCommand.LPUSH)));
     }
 
@@ -120,11 +120,13 @@ public class RedisSinkTest extends TestLogger {
     }
 
     private class TestMapper implements RedisMapper<Tuple2<String, String>> {
+
         private RedisCommandDescription redisCommandDescription;
 
-        TestMapper(RedisCommandDescription redisCommandDescription){
+        TestMapper(RedisCommandDescription redisCommandDescription) {
             this.redisCommandDescription = redisCommandDescription;
         }
+
         @Override
         public RedisCommandDescription getCommandDescription() {
             return redisCommandDescription;
